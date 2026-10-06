@@ -1,0 +1,7 @@
+Compound_ID,SMILES,Solvent
+Ethanol,CCO,CDCl3
+Anisole,COc1ccccc1,CDCl3
+Ibuprofen,CC(C)Cc1ccc(cc1)C(C)C(=O)O,CDCl3
+Acetanilide,CC(=O)Nc1ccccc1,CDCl3
+Vanillin,COc1cc(C=O)ccc1O,CDCl3
+Caffeine,Cn1cnc2c1c(=O)n(C)c(=O)n2C,CDCl3

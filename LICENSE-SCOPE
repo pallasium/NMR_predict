@@ -1,0 +1,19 @@
+Scope of this license
+
+This license applies to the source code of this repository (the *.py files)
+and to the text of README.md and RELEASE_NOTES.md.
+
+It does NOT apply to the results of calculations performed with the ORCA
+program (benchmark/results/*.md and the computed values shown in README.md).
+Those data may be shared for non-commercial purposes only, subject to the
+ORCA End User License Agreement (EULA); see benchmark/results/NOTICE.md.
+It also grants no rights in third-party data referred to in this repository
+(for example, SDBS, https://sdbs.db.aist.go.jp/, (c) AIST).
+
+このライセンスは、このリポジトリのソースコード(*.py)と、README.md・
+RELEASE_NOTES.md の文章に適用する。ORCAで計算した結果(benchmark/results/*.md
+と、README.md の計算値)には適用しない。これらは、ORCAのEULAに従い、非商用
+目的でのみ共有できる(benchmark/results/NOTICE.md を参照)。SDBSなどの第三者の
+データについても、権利を与えるものではない。
+
+(This file describes the scope of the MIT license in the file LICENSE. LICENSE-SCOPE は、LICENSE のMITライセンスの適用範囲の説明。)

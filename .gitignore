@@ -1,0 +1,9 @@
+nmr_config.json
+nmr_local.csv
+work/
+out/
+cache/
+__pycache__/
+*.pyc
+# ORCA が出した計算結果 (CSV) は、ORCA の EULA (3d, 3f) により、公開リポジトリに含めない。benchmark/run_benchmark.py で再生成できる
+benchmark/results/*/
