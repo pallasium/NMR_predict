@@ -22,7 +22,7 @@ SMILESからNMRスペクトル(1Dと2D)を予測してPNGに出す。1HはJ結�
 
 ```
 python nmr.py "Fc1ccccc1" --nuc 19F,13C       # 複数の核種 (カンマ区切り)
-python nmr.py "CP(C)(C)=O" --nuc all          # 全部 (分子にない元素は自動でスキップ)
+python nmr.py "CP(C)(C)=O" --nuc 1D          # 全部 (分子にない元素は自動でスキップ)
 ```
 引数なしで起動すると、先に「何を計算するか」を聞かれる(空Enterで1H)。
 
@@ -97,7 +97,7 @@ DMSO-d6 (CPCM(DMSO))でも、Fulmerら(2010)の値と、酢酸エチル・DMF・
 python nmr.py "CC(C)Cc1ccc(cc1)C(C)C(=O)O" --calc COSY,HSQC       # 選んだ 2D だけ
 python nmr.py "CC(C)Cc1ccc(cc1)C(C)C(=O)O" --calc 1H,13C,2D       # 1D と全部の 2D
 ```
-`--calc`は、核種(1H, 13C, 31P, 19F, 11B)と2Dの名前をカンマ区切りで並べる。`all`は全核種、`2D`は全部の2次元。`--nuc`は同じ意味の別名。
+`--calc`は、核種(1H, 13C, 31P, 19F, 11B)と2Dの名前をカンマ区切りで並べる。`1D`は全核種、`2D`は全部の2次元。`--nuc`は同じ意味の別名。
 
 ### 必要な計算だけを実行する
 選んだものに必要な計算だけが走る。
@@ -186,7 +186,7 @@ python nmr.py CCO
 ```
 python nmr.py
 ```
-最初に「計算するもの」(1H, 13C, 31P, 19F, 11B, COSY, HSQC, HMQC, HMBC, TOCSY, NOESY, ROESY。カンマ区切り、`all` = 全核種、`2D` = 全2次元。空Enterで1H)を聞かれ、続いて`SMILES または Compound_ID:`を聞かれる。SMILESが空なら終了。完成した画像は自動で開く。
+最初に「計算するもの」(1H, 13C, 31P, 19F, 11B, COSY, HSQC, HMQC, HMBC, TOCSY, NOESY, ROESY。カンマ区切り、`1D` = 全核種、`2D` = 全2次元。空Enterで1H)を聞かれ、続いて`SMILES または Compound_ID:`を聞かれる。SMILESが空なら終了。完成した画像は自動で開く。
 
 ### コマンドで指定
 ```
@@ -202,7 +202,7 @@ python nmr.py "CCO" --no-j                    # J 結合なし
 | `--orca-conf` | ORCA (DFT)で計算する配座数(既定1)。増やすと遅いが、柔軟な分子で精度が上がる |
 | `--nprocs` | 使うコア数。省略すると論理コア数を自動検出して全部使う |
 | `--mhz` | 表示する装置周波数(既定400) |
-| `--calc` (`--nuc`) | 計算するもの。核種(1H, 13C, 31P, 19F, 11B)と2D (COSY, HSQC, HMQC, HMBC, TOCSY, NOESY, ROESY)をカンマ区切りで。`all` = 全核種、`2D` = 全2次元。既定1H |
+| `--calc` (`--nuc`) | 計算するもの。核種(1H, 13C, 31P, 19F, 11B)と2D (COSY, HSQC, HMQC, HMBC, TOCSY, NOESY, ROESY)をカンマ区切りで。`1D` = 全核種、`2D` = 全2次元。既定1H |
 | `--cosy-jmin` | COSY / TOCSYで相関を出すJの下限(Hz)。既定2.0 |
 | `--no-j` | J結合を計算しない(1Hのスペクトルのみに関係) |
 | `--no-open` | 完成した画像を自動で開かない |

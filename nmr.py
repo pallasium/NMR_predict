@@ -531,7 +531,7 @@ TWOD = ['COSY', 'HSQC', 'HMQC', 'HMBC', 'TOCSY', 'NOESY', 'ROESY']
 
 
 def parse_calc(text):
-    """'1H,13C,COSY' のような指定を、計算するもののリストにする。all = 全核種, 2D = 全部の 2 次元。空なら ['1H']。
+    """'1H,13C,COSY' のような指定を、計算するもののリストにする。1D = 全核種, 2D = 全部の 2 次元。空なら ['1H']。
     戻り値は 1D (NUC の順) の後に 2D (TWOD の順)。未対応の名前があれば ValueError。"""
     items = [t.strip() for t in text.replace('、', ',').split(',') if t.strip()]
     if not items:
@@ -539,7 +539,7 @@ def parse_calc(text):
     want = set()
     for t in items:
         u = t.upper()
-        if u == 'ALL':
+        if u == '1D':
             want |= set(NUC)
         elif u == '2D':
             want |= set(TWOD)
@@ -699,7 +699,7 @@ def plot_2d(kind, pts, nx, ny, path, title, mol0, tx, ty):
         ax.scatter([a for a, _ in sel], [b for _, b in sel], marker='+', s=14, color=colors[cls], linewidths=0.6)
     if nx == ny:
         ax.plot([xlo, xhi], [xlo, xhi], ':', color='gray', lw=0.5)
-    ax.set_xlim(xhi, xlo); ax.set_ylim(ylo, yhi)                 # 横軸は左が高磁場側 (大きい ppm)、縦軸は上が大きい ppm
+    ax.set_xlim(xhi, xlo); ax.set_ylim(yhi, ylo)                 # 一般的な向き: 横軸も縦軸も、左・上が小さい ppm の側の逆 (横は左が大きい ppm、縦は下が大きい ppm)。ホモ核の対角線は右肩上がり
     ax.set_xlabel(f'δ {nx} (ppm)'); ax.set_ylabel(f'δ {ny} (ppm)')
     ax.yaxis.set_label_position('right'); ax.yaxis.tick_right()
     axt.plot(gx, sum((w * np.exp(-(gx - d) ** 2 / (2 * sx ** 2)) for d, w in tx), np.zeros_like(gx)), color='black', lw=0.8)
@@ -1034,7 +1034,7 @@ def main():
     ap.add_argument('--nconf', type=int, default=5, help='xtb で最適化する配座数 (既定 5)')
     ap.add_argument('--nprocs', type=int, help='使うコア数 (省略時は論理コア数を自動検出して全部使う)')
     ap.add_argument('--orca-conf', type=int, help='ORCA (DFT) で計算する配座数 (既定 1。増やすと遅いが柔軟な分子で精度が上がる)')
-    ap.add_argument('--calc', '--nuc', dest='nuc', default='1H', help='計算するもの (カンマ区切り): 核種 1H (既定), 13C, 31P, 19F, 11B / 2 次元 COSY, HSQC, HMQC, HMBC, TOCSY, NOESY, ROESY / all = 全核種, 2D = 全 2 次元 (例: --calc 1H,13C,COSY,HSQC)')
+    ap.add_argument('--calc', '--nuc', dest='nuc', default='1H', help='計算するもの (カンマ区切り): 核種 1H (既定), 13C, 31P, 19F, 11B / 2 次元 COSY, HSQC, HMQC, HMBC, TOCSY, NOESY, ROESY / 1D = 全核種, 2D = 全 2 次元 (例: --calc 1H,13C,COSY,HSQC)')
     ap.add_argument('--cosy-jmin', type=float, default=2.0, help='COSY / TOCSY で相関を出す J の下限 Hz (既定 2.0)')
     ap.add_argument('--no-j', action='store_true', help='J 結合を計算しない (速い。線は分裂しない)')
     ap.add_argument('--no-open', action='store_true', help='完成した画像を自動で開かない')
@@ -1043,7 +1043,7 @@ def main():
     try:
         args.nuc_list = parse_calc(args.nuc)
     except ValueError as e:
-        sys.exit(f'エラー: 未対応の指定: {e}  (使えるもの: ' + ', '.join(list(NUC) + TWOD) + ')')
+        sys.exit(f'エラー: 未対応の指定: {e}  (使えるもの: ' + ', '.join(['1D'] + list(NUC) + TWOD) + ')')
 
     cfg = load_config()
     if args.nprocs:
@@ -1061,7 +1061,7 @@ def main():
     print(f'溶媒: {args.solvent or "CDCl3"}   (変えるには --solvent を付けて起動)\n')
     while True:
         try:
-            n = input('計算するもの (1H, 13C, 31P, 19F, 11B / COSY, HSQC, HMQC, HMBC, TOCSY, NOESY, ROESY / カンマ区切り / all=全核種, 2D=全2次元。空 Enter で 1H): ').strip()
+            n = input('計算するもの (1H, 13C, 31P, 19F, 11B / COSY, HSQC, HMQC, HMBC, TOCSY, NOESY, ROESY / カンマ区切り / 1D=全核種, 2D=全2次元。空 Enter で 1H): ').strip()
             try:
                 nl = parse_calc(n)
             except ValueError as e:
