@@ -1,4 +1,4 @@
-"""NMR スペクトルの予測 (高速版; 1H, 13C, 31P, 19F, 11B と 2D: COSY, HSQC, HMBC, TOCSY, NOESY): RDKit 配座 -> xtb 最適化 -> ORCA GIAO (PBE/def2-SVP, 1 配座) + 経験式の J 結合 -> PNG。
+"""NMR スペクトルの予測 (高速版; 1H, 13C, 31P, 19F, 11B と 2D: COSY, HSQC, HMQC, HMBC, TOCSY, NOESY, ROESY): RDKit 配座 -> xtb 最適化 -> ORCA GIAO (PBE/def2-SVP, 1 配座) + 経験式の J 結合 -> PNG。
 
 使い方:
   python nmr.py "COc1ccccc1"                 # SMILES を直接指定
@@ -527,7 +527,7 @@ def reference_sigma(cfg, nuc, alpb, cpcm):
     return sigma
 
 
-TWOD = ['COSY', 'HSQC', 'HMBC', 'TOCSY', 'NOESY']
+TWOD = ['COSY', 'HSQC', 'HMQC', 'HMBC', 'TOCSY', 'NOESY', 'ROESY']
 
 
 def parse_calc(text):
@@ -604,8 +604,9 @@ def tocsy_points(peaksH, J, group, jmin):
     return pts
 
 
-def hsqc_points(mol, peaksH, peaksC):
-    """HSQC / HMBC の C-H 直結 (1 結合)。CH, CH3 は赤 (+)、CH2 は青 (-) の編集型 HSQC として描く。x = 1H, y = 13C。"""
+def hsqc_points(mol, peaksH, peaksC, edited=True):
+    """HSQC / HMQC の C-H 直結 (1 結合)。HSQC (edited=True) は CH, CH3 を赤 (+)、CH2 を青 (-) の編集型で描く。
+    HMQC (edited=False) は多重度の編集がないので、すべて同じ種類 ('hmqc')。x = 1H, y = 13C。"""
     sh, sc = atom_shifts(peaksH), atom_shifts(peaksC)
     acc = {}
     for at in mol.GetAtoms():
@@ -613,7 +614,7 @@ def hsqc_points(mol, peaksH, peaksC):
             continue
         hs = [n.GetIdx() for n in at.GetNeighbors() if n.GetSymbol() == 'H' and n.GetIdx() in sh]
         for h in hs:
-            kind = 'neg' if len(hs) == 2 else 'pos'
+            kind = ('neg' if len(hs) == 2 else 'pos') if edited else 'hmqc'
             key = (round(sh[h], 3), round(sc[at.GetIdx()], 2), kind)
             acc[key] = acc.get(key, 0.0) + 1.0 / len(hs)
     return [(x, y, w, k, f'1H {x:.2f} / 13C {y:.1f}') for (x, y, k), w in acc.items()]
@@ -636,8 +637,9 @@ def hmbc_points(mol, peaksH, peaksC):
     return [(x, y, min(w, 2.0), 'hmbc', f'1H {x:.2f} / 13C {y:.1f}') for (x, y), w in acc.items()]
 
 
-def noesy_points(peaksH, confs, rmax=5.0):
-    """NOESY: 空間的に近い H グループの組。強度は <r^-6> のボルツマン平均 (xtb の配座) の和。"""
+def noesy_points(peaksH, confs, rmax=5.0, cls='cross'):
+    """NOESY / ROESY: 空間的に近い H グループの組。強度は <r^-6> のボルツマン平均 (xtb の配座) の和。
+    ROESY (cls='roe') は、交差ピークが分子量によらず対角と逆の位相 (NOE の符号反転 = ゼロ交差がない)。"""
     ex = {i for d, n, idxs, e in peaksH if e for i in idxs}
     hs = [i for d, n, idxs, e in peaksH if not e for i in idxs]
     pos = {h: k for k, h in enumerate(hs)}
@@ -658,7 +660,7 @@ def noesy_points(peaksH, confs, rmax=5.0):
                 continue
             w = 0.6 * min(1.0, math.sqrt(I)) * math.sqrt(na * nb)
             note = f'{da:.2f}-{db:.2f} ppm, 実効距離 約 {2.5 * I ** (-1 / 6):.1f} A'
-            pts += [(da, db, w, 'cross', note), (db, da, w, 'cross', note)]
+            pts += [(da, db, w, cls, note), (db, da, w, cls, note)]
     return pts
 
 
@@ -678,7 +680,7 @@ def plot_2d(kind, pts, nx, ny, path, title, mol0, tx, ty):
     gx, gy = np.linspace(xlo, xhi, 700), np.linspace(ylo, yhi, 700)
     sx = max(0.012 if nx == '1H' else 0.4, (xhi - xlo) / 170)
     sy = max(0.012 if ny == '1H' else 0.4, (yhi - ylo) / 170)
-    colors = {'diag': '#555555', 'cross': 'tab:red', 'pos': 'tab:red', 'neg': 'tab:blue', 'hmbc': 'tab:green'}
+    colors = {'diag': '#555555', 'cross': 'tab:red', 'pos': 'tab:red', 'neg': 'tab:blue', 'hmbc': 'tab:green', 'hmqc': 'tab:purple', 'roe': 'tab:blue'}
     Z = {}
     for x, y, w, cls, _ in pts:
         z = Z.setdefault(cls, np.zeros((len(gy), len(gx))))
@@ -911,13 +913,13 @@ def run_one(cfg, args, target):
     need = set(n for n in calc if n in NUC)
     if two_d:
         need.add('1H')
-    if 'HSQC' in two_d or 'HMBC' in two_d:
+    if any(k in two_d for k in ('HSQC', 'HMQC', 'HMBC')):
         need.add('13C')
     missing = [n for n in NUC if n in need and NUC[n]['el'] not in symbols]
     for n in missing:
         print(f'  {n}: この分子には {NUC[n]["el"]} 原子がないので、スキップします')
     need -= set(missing)
-    two_d = [n for n in two_d if '1H' in need and not (n in ('HSQC', 'HMBC') and '13C' not in need)]
+    two_d = [n for n in two_d if '1H' in need and not (n in ('HSQC', 'HMQC', 'HMBC') and '13C' not in need)]
     nuc1d = [n for n in NUC if n in calc and n in need]
     if not need or not (nuc1d or two_d):
         sys.exit('エラー: 指定した計算に必要な原子が分子にありません。')
@@ -930,7 +932,7 @@ def run_one(cfg, args, target):
     work = os.path.join(HERE, 'work', f"{name}_{solv.lower()}")
     confs_xyz = []
     res = compute_all(cfg, mol, work, alpb, cpcm, args.nconf, max_orca=args.orca_conf or cfg['orca_conf'],
-                      want_j=want_j, conf_out=confs_xyz if 'NOESY' in two_d else None)
+                      want_j=want_j, conf_out=confs_xyz if ('NOESY' in two_d or 'ROESY' in two_d) else None)
     sig_all, jmat = res if want_j else (res, None)
     os.makedirs(os.path.join(HERE, 'out'), exist_ok=True)
     last_png = None
@@ -995,6 +997,10 @@ def run_one(cfg, args, target):
                 pts, nx, ny, tx, ty = tocsy_points(pH, Jd, group, args.cosy_jmin), '1H', '1H', tH, tH
             elif kind == 'NOESY':
                 pts, nx, ny, tx, ty = noesy_points(pH, confs_xyz), '1H', '1H', tH, tH
+            elif kind == 'ROESY':
+                pts, nx, ny, tx, ty = noesy_points(pH, confs_xyz, cls='roe'), '1H', '1H', tH, tH
+            elif kind == 'HMQC':
+                pts, nx, ny, tx, ty = hsqc_points(mol, pH, pC, edited=False), '1H', '13C', tH, tC
             elif kind == 'HSQC':
                 pts, nx, ny, tx, ty = hsqc_points(mol, pH, pC), '1H', '13C', tH, tC
             else:
@@ -1028,7 +1034,7 @@ def main():
     ap.add_argument('--nconf', type=int, default=5, help='xtb で最適化する配座数 (既定 5)')
     ap.add_argument('--nprocs', type=int, help='使うコア数 (省略時は論理コア数を自動検出して全部使う)')
     ap.add_argument('--orca-conf', type=int, help='ORCA (DFT) で計算する配座数 (既定 1。増やすと遅いが柔軟な分子で精度が上がる)')
-    ap.add_argument('--calc', '--nuc', dest='nuc', default='1H', help='計算するもの (カンマ区切り): 核種 1H (既定), 13C, 31P, 19F, 11B / 2 次元 COSY, HSQC, HMBC, TOCSY, NOESY / all = 全核種, 2D = 全 2 次元 (例: --calc 1H,13C,COSY,HSQC)')
+    ap.add_argument('--calc', '--nuc', dest='nuc', default='1H', help='計算するもの (カンマ区切り): 核種 1H (既定), 13C, 31P, 19F, 11B / 2 次元 COSY, HSQC, HMQC, HMBC, TOCSY, NOESY, ROESY / all = 全核種, 2D = 全 2 次元 (例: --calc 1H,13C,COSY,HSQC)')
     ap.add_argument('--cosy-jmin', type=float, default=2.0, help='COSY / TOCSY で相関を出す J の下限 Hz (既定 2.0)')
     ap.add_argument('--no-j', action='store_true', help='J 結合を計算しない (速い。線は分裂しない)')
     ap.add_argument('--no-open', action='store_true', help='完成した画像を自動で開かない')
@@ -1055,7 +1061,7 @@ def main():
     print(f'溶媒: {args.solvent or "CDCl3"}   (変えるには --solvent を付けて起動)\n')
     while True:
         try:
-            n = input('計算するもの (1H, 13C, 31P, 19F, 11B / COSY, HSQC, HMBC, TOCSY, NOESY / カンマ区切り / all=全核種, 2D=全2次元。空 Enter で 1H): ').strip()
+            n = input('計算するもの (1H, 13C, 31P, 19F, 11B / COSY, HSQC, HMQC, HMBC, TOCSY, NOESY, ROESY / カンマ区切り / all=全核種, 2D=全2次元。空 Enter で 1H): ').strip()
             try:
                 nl = parse_calc(n)
             except ValueError as e:

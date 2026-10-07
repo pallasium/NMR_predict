@@ -1,9 +1,9 @@
-# NMR予測(xtb + ORCA): 1H / 13C / 31P / 19F / 11Bと2次元(COSY / HSQC / HMBC / TOCSY / NOESY)
+# NMR予測(xtb + ORCA): 1H / 13C / 31P / 19F / 11Bと2次元(COSY / HSQC / HMQC / HMBC / TOCSY / NOESY / ROESY)
 
 SMILESからNMRスペクトル(1Dと2D)を予測してPNGに出す。1HはJ結合による分裂も含めて表示する。
 
 - 構造最適化: [xtb](https://github.com/grimme-lab/xtb) (GFN2-xTB)
-- 化学シフト: [ORCA](https://orcaforum.kofo.mpg.de)のDFT (GIAO)で遮蔽定数を計算し、TMSを引く。汎関数は自動で選ぶ: **13Cを含む計算(13C, HSQC, HMBC)はPBE0/def2-SVP、それ以外(1Hなど)はPBE/def2-SVP** (理由は「精度の検証」)
+- 化学シフト: [ORCA](https://orcaforum.kofo.mpg.de)のDFT (GIAO)で遮蔽定数を計算し、TMSを引く。汎関数は自動で選ぶ: **13Cを含む計算(13C, HSQC, HMQC, HMBC)はPBE0/def2-SVP、それ以外(1Hなど)はPBE/def2-SVP** (理由は「精度の検証」)
 - J結合: xtbの構造から経験式(Karplus型など)で見積もる
 - スペクトル: 核スピンの厳密なシミュレーション(2次の効果・屋根効果を含む)
 
@@ -80,16 +80,18 @@ DMSO-d6 (CPCM(DMSO))でも、Fulmerら(2010)の値と、酢酸エチル・DMF・
 ```
 補正の値は、自身で測定した(または文献にある)同系統の化合物で、予測と実測の差を見て決める。このリポジトリには、補正値は入っていない。
 
-## 2次元NMR (COSY / HSQC / HMBC / TOCSY / NOESY)
+## 2次元NMR (COSY / HSQC / HMQC / HMBC / TOCSY / NOESY / ROESY)
 予測したシフトとJ結合、構造から、2Dスペクトルを描く。**位置の予測が中心で、強度は定性的** (パルス系列・位相・緩和は考えない)。上と左に1Dのトレースを付ける。
 
 | 2D | 横軸 / 縦軸 | 相関ピークの作り方 |
 |---|---|---|
 | COSY | 1H / 1H | Jが`--cosy-jmin` (既定2 Hz)以上のHグループの組。強度はJに比例 |
 | HSQC | 1H / 13C | C-Hの直結。CH, CH3は赤(+)、CH2は青(−)の編集型 |
+| HMQC | 1H / 13C | HSQCと同じC-Hの直結。多重度の編集はなく、すべて紫(同じ位相)。1H-1HのJによる縦方向の広がりは描かない |
 | HMBC | 1H / 13C | 2結合(弱)と3結合(強)離れたC-Hの組 |
 | TOCSY | 1H / 1H | 結合でつながったHグループ(スピン系)の全部の組。つながりが遠いほど弱い |
 | NOESY | 1H / 1H | 空間的に近いHグループの組(実効距離 約5 Å 以内)。xtbの全配座の<r⁻⁶>のボルツマン平均 |
+| ROESY | 1H / 1H | NOESYと同じ距離の見積もり。交差ピークは青で、分子量によらず対角(灰)と逆の位相 |
 
 ```
 python nmr.py "CC(C)Cc1ccc(cc1)C(C)C(=O)O" --calc COSY,HSQC       # 選んだ 2D だけ
@@ -106,16 +108,16 @@ python nmr.py "CC(C)Cc1ccc(cc1)C(C)C(=O)O" --calc 1H,13C,2D       # 1D と全部
 | 13C | TMS (C) | | |
 | 31P / 19F / 11B | H3PO4 / CFCl3 / BF3-OEt2 | | |
 | COSY, TOCSY | TMS (H) | ○ | |
-| HSQC, HMBC | TMS (H, C) | | |
-| NOESY | TMS (H) | | ○ (全配座を使う) |
+| HSQC, HMQC, HMBC | TMS (H, C) | | |
+| NOESY, ROESY | TMS (H) | | ○ (全配座を使う) |
 
 ORCAの遮蔽定数の計算は、何を選んでも1回(全原子まとめて)。基準物質の計算は初回のみで、保存される。
 
 ### 2Dの限界
-- 13Cのシフトの誤差(数ppm)が、そのままHSQC / HMBCの縦軸のずれになる。
+- 13Cのシフトの誤差(数ppm)が、そのままHSQC / HMQC / HMBCの縦軸のずれになる。
 - HMBCは、実際には2J / 3Jの大きさで強度が変わる。ここでは3結合を1.0、2結合を0.5とした固定の重み。4結合以上(W型など)は出さない。
 - COSYはJが小さい(約2 Hz未満)と出ない。経験式のJは ±1〜2 Hzの目安。
-- NOESYは、xtbの配座(既定5個)の範囲の平均。配座の探索は不十分なことがある。分子量によるNOEの符号の変化(ゼロ交差)は考えない。
+- NOESYは、xtbの配座(既定5個)の範囲の平均。配座の探索は不十分なことがある。分子量によるNOEの符号の変化(ゼロ交差)は考えない。ROESYはNOESYと同じ距離から作るので、強度の違いは出ない(符号と色だけが違う)。TOCSY由来のアーティファクトや化学交換のピークは描かない。
 - ジアステレオトピックなH (CH2の2つのH)は区別せず、同じ位置に出る。交換性H (OH, NH)は2Dに含めない。
 
 ## 必要な環境
@@ -184,7 +186,7 @@ python nmr.py CCO
 ```
 python nmr.py
 ```
-最初に「計算するもの」(1H, 13C, 31P, 19F, 11B, COSY, HSQC, HMBC, TOCSY, NOESY。カンマ区切り、`all` = 全核種、`2D` = 全2次元。空Enterで1H)を聞かれ、続いて`SMILES または Compound_ID:`を聞かれる。SMILESが空なら終了。完成した画像は自動で開く。
+最初に「計算するもの」(1H, 13C, 31P, 19F, 11B, COSY, HSQC, HMQC, HMBC, TOCSY, NOESY, ROESY。カンマ区切り、`all` = 全核種、`2D` = 全2次元。空Enterで1H)を聞かれ、続いて`SMILES または Compound_ID:`を聞かれる。SMILESが空なら終了。完成した画像は自動で開く。
 
 ### コマンドで指定
 ```
@@ -200,7 +202,7 @@ python nmr.py "CCO" --no-j                    # J 結合なし
 | `--orca-conf` | ORCA (DFT)で計算する配座数(既定1)。増やすと遅いが、柔軟な分子で精度が上がる |
 | `--nprocs` | 使うコア数。省略すると論理コア数を自動検出して全部使う |
 | `--mhz` | 表示する装置周波数(既定400) |
-| `--calc` (`--nuc`) | 計算するもの。核種(1H, 13C, 31P, 19F, 11B)と2D (COSY, HSQC, HMBC, TOCSY, NOESY)をカンマ区切りで。`all` = 全核種、`2D` = 全2次元。既定1H |
+| `--calc` (`--nuc`) | 計算するもの。核種(1H, 13C, 31P, 19F, 11B)と2D (COSY, HSQC, HMQC, HMBC, TOCSY, NOESY, ROESY)をカンマ区切りで。`all` = 全核種、`2D` = 全2次元。既定1H |
 | `--cosy-jmin` | COSY / TOCSYで相関を出すJの下限(Hz)。既定2.0 |
 | `--no-j` | J結合を計算しない(1Hのスペクトルのみに関係) |
 | `--no-open` | 完成した画像を自動で開かない |
@@ -210,7 +212,7 @@ python nmr.py "CCO" --no-j                    # J 結合なし
 - `nmr.csv`: サンプル。`Compound_ID,SMILES,Solvent`の列を持つ。ここにあるIDは、名前だけで呼び出せる。
 
 ### 出力
-- `out/<name>_<COSY|HSQC|HMBC|TOCSY|NOESY>.png`と`.csv`: 2Dスペクトルと、相関ピークの一覧
+- `out/<name>_<COSY|HSQC|HMQC|HMBC|TOCSY|NOESY|ROESY>.png`と`.csv`: 2Dスペクトルと、相関ピークの一覧
 - `out/<name>_<核種>.png`と`.csv`: 1Dスペクトル(1Hは`_1H`)
 - `out/<name>_1H.png`: スペクトル(全体図+ ピークごとの拡大図)
 - `out/<name>_1H.csv`: シフト(ppm)、Hの数、原子番号

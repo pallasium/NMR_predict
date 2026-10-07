@@ -1,5 +1,20 @@
 # リリースノート
 
+## v0.4.0 — 2次元NMRにHMQCとROESYを追加
+
+### 追加
+- **HMQC**: `--calc HMQC`。位置はHSQCと同じ(C-Hの1結合の直結)。多重度の編集はなく、すべて同じ位相(紫)で描く。1H-1HのJによる縦方向の広がりは描かない。
+- **ROESY**: `--calc ROESY`。距離の見積もりはNOESYと同じ(xtbの全配座の<r⁻⁶>のボルツマン平均)で、強度もNOESYと同じ。交差ピークは青で、分子量によらず対角(灰)と逆の位相。TOCSY由来のアーティファクトや化学交換のピークは描かない。
+- `out/<name>_HMQC.png` / `.csv`、`out/<name>_ROESY.png` / `.csv`。CSVの`type`列は、HMQCが`hmqc`、ROESYの交差ピークが`roe`。
+
+### 変更
+- `--calc 2D`と`--calc all`に、HMQCとROESYが含まれる。
+- 計算の範囲は、HMQCはHSQCと同じ(1Hと13C。13Cを含むのでPBE0)、ROESYはNOESYと同じ(全配座を使う)。
+- 既存のCOSY / HSQC / HMBC / TOCSY / NOESYの出力は変わらない。
+
+### 確認
+- エタノールで、HMQCとROESYが最後まで動くことを確認した(相関ピークは各2個)。それ以外の分子での検証や、実測のスペクトルとの比較は、していない。
+
 ## v0.3.0 — 13CはPBE0を自動選択、精度の検証、描画の改善
 
 ### 追加
