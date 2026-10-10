@@ -12,6 +12,7 @@
 """
 import argparse, glob, hashlib, json, math, os, re, shutil, subprocess, sys
 import numpy as np
+from assign_view import make_assignment
 from rdkit import Chem
 from rdkit.Chem import AllChem, Draw
 
@@ -979,6 +980,9 @@ def run_one(cfg, args, target):
             print('\n  J 結合 (Hz, 経験式・配座/回転平均):')
             for a_, b_, v, n in gtab:
                 print(f'    {a_:5.2f} - {b_:5.2f} ppm   {v:6.2f}')
+        if not args.no_assign:
+            for p_ in make_assignment(mol0, peaks, nuc, base, name, args.mhz):
+                print(f'  帰属図: {p_}')
         print(f'  画像: {base}.png\n  表:   {base}.csv')
         last_png = base + '.png'
 
@@ -1037,6 +1041,7 @@ def main():
     ap.add_argument('--calc', '--nuc', dest='nuc', default='1H', help='計算するもの (カンマ区切り): 核種 1H (既定), 13C, 31P, 19F, 11B / 2 次元 COSY, HSQC, HMQC, HMBC, TOCSY, NOESY, ROESY / 1D = 全核種, 2D = 全 2 次元 (例: --calc 1H,13C,COSY,HSQC)')
     ap.add_argument('--cosy-jmin', type=float, default=2.0, help='COSY / TOCSY で相関を出す J の下限 Hz (既定 2.0)')
     ap.add_argument('--no-j', action='store_true', help='J 結合を計算しない (速い。線は分裂しない)')
+    ap.add_argument('--no-assign', action='store_true', help='原子とピークの対応図 (_assign.png / _assign.html) を出力しない')
     ap.add_argument('--no-open', action='store_true', help='完成した画像を自動で開かない')
     ap.add_argument('--mhz', type=float, default=400.0, help='表示する装置周波数 (既定 400)')
     args = ap.parse_args()
